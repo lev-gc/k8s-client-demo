@@ -2,25 +2,15 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"path/filepath"
-	"time"
-
+	"k8s-client/common/client"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
+	"time"
 )
 
 func main() {
-	config, _ := getClient(false)
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
+	clientset, _ := client.GetClient()
 	for {
 		pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -44,30 +34,4 @@ func main() {
 
 		time.Sleep(10 * time.Second)
 	}
-}
-
-// get client config in cluster or from current kubeconfig context
-func getClient(inCluster bool) (*rest.Config, error) {
-	var config *rest.Config
-	var err error
-	if inCluster {
-		// creates the in-cluster config
-		if config, err = rest.InClusterConfig(); err != nil {
-			panic(err.Error())
-		}
-	} else {
-		// creates the out-of-cluster config
-		var kubeconfig *string
-		if home := homedir.HomeDir(); home != "" {
-			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-		} else {
-			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-		}
-		flag.Parse()
-		// use the current context in kubeconfig
-		if config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig); err != nil {
-			panic(err.Error())
-		}
-	}
-	return config, nil
 }
